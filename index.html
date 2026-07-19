@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Loan Amortization Ledger</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Khmer:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -287,6 +287,40 @@
     .masthead{ flex-direction:column; align-items:flex-start; gap:8px; }
     .masthead .folio{ text-align:left; }
   }
+
+  .lang-switch{
+    display:flex;
+    gap:6px;
+    margin-bottom:8px;
+  }
+  .lang-btn{
+    border:1px solid var(--rule);
+    background:var(--white);
+    color:var(--ink-soft);
+    font-size:12px;
+    font-weight:600;
+    padding:5px 12px;
+    border-radius:20px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  .lang-btn.active{
+    background:var(--ledger-green);
+    border-color:var(--ledger-green);
+    color:var(--white);
+  }
+  .pdf-note{
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:8px;
+  }
+
+  body.lang-km, body.lang-km input, body.lang-km select, body.lang-km button,
+  body.lang-km .card-title, body.lang-km h1, body.lang-km label, body.lang-km .hint,
+  body.lang-km .sub, body.lang-km .label, body.lang-km .stamp-top, body.lang-km .empty-note,
+  body.lang-km table.schedule thead th, body.lang-km .lang-btn, body.lang-km .pdf-note{
+    font-family:'Noto Sans Khmer', 'Inter', sans-serif;
+  }
 </style>
 </head>
 <body>
@@ -294,8 +328,12 @@
 
   <div class="masthead">
     <div>
-      <h1>Amortization Ledger</h1>
-      <div class="sub">Loan repayment schedule</div>
+      <div class="lang-switch">
+        <button type="button" class="lang-btn active" id="langBtnEn" onclick="setLanguage('en')">English</button>
+        <button type="button" class="lang-btn" id="langBtnKm" onclick="setLanguage('km')">ខ្មែរ</button>
+      </div>
+      <h1 id="txtTitle">Amortization Ledger</h1>
+      <div class="sub" id="txtSubtitle">Loan repayment schedule</div>
     </div>
     <div class="folio">
       FOLIO NO. 001<br>
@@ -304,86 +342,87 @@
   </div>
 
   <div class="card">
-    <div class="card-title">Loan particulars</div>
+    <div class="card-title" id="txtCardParticulars">Loan particulars</div>
     <div class="grid2">
       <div class="field">
-        <label for="loanType">Loan type</label>
+        <label for="loanType" id="lblLoanType">Loan type</label>
         <select id="loanType">
-          <option value="normal" selected>Normal loan</option>
-          <option value="onetime">One time interest</option>
-          <option value="halfoff">50% off</option>
-          <option value="zero">0 interest</option>
+          <option value="normal" selected id="optNormal">Normal loan</option>
+          <option value="onetime" id="optOnetime">One time interest</option>
+          <option value="halfoff" id="optHalfoff">50% off</option>
+          <option value="zero" id="optZero">0 interest</option>
         </select>
         <div class="hint" id="typeHint">Interest = remaining principal &times; rate each period. Principal is split evenly; the last payment absorbs any rounding.</div>
       </div>
       <div class="field">
-        <label for="loanAmount">Loan amount</label>
+        <label for="loanAmount" id="lblLoanAmount">Loan amount</label>
         <input type="number" id="loanAmount" value="10000" min="0" step="0.01">
       </div>
       <div class="field">
-        <label for="duration">Duration (number of periods)</label>
+        <label for="duration" id="lblDuration">Duration (number of periods)</label>
         <input type="number" id="duration" value="12" min="1" step="1">
-        <div class="hint">Total number of scheduled payments over the loan's life.</div>
+        <div class="hint" id="durationHint">Total number of scheduled payments over the loan's life.</div>
       </div>
       <div class="field">
-        <label for="rate">Interest rate per period (%)</label>
+        <label for="rate" id="lblRate">Interest rate per period (%)</label>
         <input type="number" id="rate" value="2" min="0" step="0.01">
         <div class="hint" id="rateHint">Applied once per payment: as the monthly rate if Pay plan is Monthly, or as the 2-week rate if Pay plan is Every 2 weeks.</div>
       </div>
       <div class="field">
-        <label for="plan">Pay plan</label>
+        <label for="plan" id="lblPlan">Pay plan</label>
         <select id="plan">
-          <option value="monthly">Monthly (same date each month)</option>
-          <option value="biweekly">Every 2 weeks</option>
+          <option value="monthly" id="optMonthly">Monthly (same date each month)</option>
+          <option value="biweekly" id="optBiweekly">Every 2 weeks</option>
         </select>
         <div class="hint" id="planHint">Payments fall on the same day each month (e.g. 7/17/2026 &rarr; 8/17/2026).</div>
       </div>
       <div class="field">
-        <label for="startDate">Start date (first payment)</label>
+        <label for="startDate" id="lblStartDate">Start date (first payment)</label>
         <input type="date" id="startDate">
       </div>
     </div>
     <div class="btn-row">
-      <button class="generate" onclick="generateSchedule()">Generate schedule</button>
+      <button class="generate" id="btnGenerate" onclick="generateSchedule()">Generate schedule</button>
     </div>
   </div>
 
   <div class="card summary-wrap" id="summaryCard" style="display:none;">
-    <div class="card-title">Summary</div>
+    <div class="card-title" id="txtCardSummary">Summary</div>
     <div class="stamp" id="interestStamp">
       <div class="stamp-inner">
-        <div class="stamp-top">Total interest</div>
+        <div class="stamp-top" id="txtStampLabel">Total interest</div>
         <div class="stamp-num" id="stampAmount">$0</div>
       </div>
     </div>
     <div class="summary-grid">
       <div class="stat">
-        <div class="label">Loan amount</div>
+        <div class="label" id="txtStatLoan">Loan amount</div>
         <div class="value" id="statLoan">$0.00</div>
       </div>
       <div class="stat">
-        <div class="label">Number of payments</div>
+        <div class="label" id="txtStatCount">Number of payments</div>
         <div class="value" id="statCount">0</div>
       </div>
       <div class="stat">
-        <div class="label">Total interest</div>
+        <div class="label" id="txtStatInterest">Total interest</div>
         <div class="value" id="statInterest">$0.00</div>
       </div>
       <div class="stat">
-        <div class="label">Total paid back</div>
+        <div class="label" id="txtStatTotal">Total paid back</div>
         <div class="value" id="statTotal">$0.00</div>
       </div>
     </div>
     <div class="btn-row" style="justify-content:flex-start; gap:10px; margin-top:20px;">
-      <button class="generate" style="background:var(--brass);" onclick="exportExcel()">Export to Excel</button>
-      <button class="generate" onclick="exportPDF()">Export to PDF</button>
+      <button class="generate" style="background:var(--brass);" id="btnExportExcel" onclick="exportExcel()">Export to Excel</button>
+      <button class="generate" id="btnExportPDF" onclick="exportPDF()">Export to PDF</button>
     </div>
+    <div class="pdf-note" id="txtPdfNote" style="display:none;"></div>
   </div>
 
   <div class="card">
-    <div class="card-title">Schedule</div>
+    <div class="card-title" id="txtCardSchedule">Schedule</div>
     <div id="scheduleContainer">
-      <div class="empty-note">Enter loan details above and generate the schedule.</div>
+      <div class="empty-note" id="txtEmptyNote">Enter loan details above and generate the schedule.</div>
     </div>
   </div>
 
@@ -393,27 +432,177 @@
 document.getElementById('startDate').valueAsDate = new Date();
 document.getElementById('today-stamp').textContent = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
 
-var typeHints = {
-  normal: 'Interest = remaining principal &times; rate each period. Principal is split evenly; the last payment absorbs any rounding.',
-  onetime: 'The full loan amount plus interest (loan amount &times; rate) is repaid in a single payment on the start date, regardless of duration or payback plan.',
-  halfoff: 'Same as normal loan, but only 50% of the computed interest is charged.',
-  zero: 'No interest is charged on any payment.'
-};
-document.getElementById('loanType').addEventListener('change', function(){
-  document.getElementById('typeHint').innerHTML = typeHints[this.value];
-});
+var currentLang = 'en';
 
-document.getElementById('plan').addEventListener('change', function(){
-  var hint = document.getElementById('planHint');
-  var rateHint = document.getElementById('rateHint');
-  if(this.value === 'biweekly'){
-    hint.textContent = 'Payments fall every 14 days from the start date. Duration is the number of biweekly payments.';
-    rateHint.textContent = 'Applied once per payment as the 2-week rate, since Pay plan is Every 2 weeks.';
-  } else {
-    hint.textContent = 'Payments fall on the same day each month (e.g. 7/17/2026 \u2192 8/17/2026).';
-    rateHint.textContent = 'Applied once per payment as the monthly rate, since Pay plan is Monthly.';
+var i18n = {
+  en: {
+    title: 'Amortization Ledger',
+    subtitle: 'Loan repayment schedule',
+    cardParticulars: 'Loan particulars',
+    lblLoanType: 'Loan type',
+    lblLoanAmount: 'Loan amount',
+    lblDuration: 'Duration (number of periods)',
+    durationHint: "Total number of scheduled payments over the loan's life.",
+    lblRate: 'Interest rate per period (%)',
+    lblPlan: 'Pay plan',
+    lblStartDate: 'Start date (first payment)',
+    optNormal: 'Normal loan',
+    optOnetime: 'One time interest',
+    optHalfoff: '50% off',
+    optZero: '0 interest',
+    optMonthly: 'Monthly (same date each month)',
+    optBiweekly: 'Every 2 weeks',
+    btnGenerate: 'Generate schedule',
+    cardSummary: 'Summary',
+    stampLabel: 'Total interest',
+    statLoan: 'Loan amount',
+    statCount: 'Number of payments',
+    statInterest: 'Total interest',
+    statTotal: 'Total paid back',
+    btnExportExcel: 'Export to Excel',
+    btnExportPDF: 'Export to PDF',
+    pdfNote: 'PDF export uses English labels; Khmer text is not supported by the PDF font engine.',
+    cardSchedule: 'Schedule',
+    emptyNote: 'Enter loan details above and generate the schedule.',
+    errorFill: 'Please fill in loan amount, duration, and start date.',
+    errorGenerateFirst: 'Please generate a schedule first.',
+    thNum: '#', thDate: 'Due date', thBegin: 'Beginning balance', thPrincipal: 'Principal',
+    thInterest: 'Interest', thPayment: 'Payment', thEnd: 'Ending balance',
+    typeHints: {
+      normal: 'Interest = remaining principal &times; rate each period. Principal is split evenly; the last payment absorbs any rounding.',
+      onetime: 'The full loan amount plus interest (loan amount &times; rate) is repaid in a single payment on the start date, regardless of duration or payback plan.',
+      halfoff: 'Same as normal loan, but only 50% of the computed interest is charged.',
+      zero: 'No interest is charged on any payment.'
+    },
+    planHint: {
+      monthly: 'Payments fall on the same day each month (e.g. 7/17/2026 \u2192 8/17/2026).',
+      biweekly: 'Payments fall every 14 days from the start date. Duration is the number of biweekly payments.'
+    },
+    rateHint: {
+      monthly: 'Applied once per payment as the monthly rate, since Pay plan is Monthly.',
+      biweekly: 'Applied once per payment as the 2-week rate, since Pay plan is Every 2 weeks.'
+    },
+    pdfTitle: 'Loan amortization schedule',
+    metaLoanAmount: 'Loan amount', metaLoanType: 'Loan type', metaDuration: 'Duration (periods)',
+    metaRate: 'Interest rate per period (%)', metaPlan: 'Pay plan', metaStartDate: 'Start date',
+    metaNumPayments: 'Number of payments', metaTotalInterest: 'Total interest', metaTotalPaid: 'Total paid back'
+  },
+  km: {
+    title: 'សៀវភៅបញ្ជីបង់រំលស់',
+    subtitle: 'កាលវិភាគសងប្រាក់កម្ចី',
+    cardParticulars: 'ព័ត៌មានលម្អិតអំពីប្រាក់កម្ចី',
+    lblLoanType: 'ប្រភេទប្រាក់កម្ចី',
+    lblLoanAmount: 'ចំនួនប្រាក់កម្ចី',
+    lblDuration: 'រយៈពេល (ចំនួនដំណាក់កាល)',
+    durationHint: 'ចំនួនសរុបនៃការទូទាត់ដែលបានកំណត់ពេលវេលាពេញមួយអាយុកាលនៃប្រាក់កម្ចី។',
+    lblRate: 'អត្រាការប្រាក់ក្នុងមួយដំណាក់កាល (%)',
+    lblPlan: 'ផែនការទូទាត់',
+    lblStartDate: 'កាលបរិច្ឆេទចាប់ផ្តើម (ការទូទាត់ដំបូង)',
+    optNormal: 'ប្រាក់កម្ចីធម្មតា',
+    optOnetime: 'ការប្រាក់ម្តងតែម្តង',
+    optHalfoff: 'បញ្ចុះ៥០%',
+    optZero: 'គ្មានការប្រាក់',
+    optMonthly: 'ប្រចាំខែ (ថ្ងៃដូចគ្នារាល់ខែ)',
+    optBiweekly: 'រៀងរាល់ ២ សប្តាហ៍',
+    btnGenerate: 'បង្កើតកាលវិភាគ',
+    cardSummary: 'សេចក្តីសង្ខេប',
+    stampLabel: 'ការប្រាក់សរុប',
+    statLoan: 'ចំនួនប្រាក់កម្ចី',
+    statCount: 'ចំនួនការទូទាត់',
+    statInterest: 'ការប្រាក់សរុប',
+    statTotal: 'ចំនួនទឹកប្រាក់សរុបបានសង',
+    btnExportExcel: 'នាំចេញទៅ Excel',
+    btnExportPDF: 'នាំចេញទៅ PDF',
+    pdfNote: 'ឯកសារ PDF ប្រើស្លាកជាភាសាអង់គ្លេស ដោយសារពុម្ពអក្សរ PDF មិនអាចបង្ហាញអក្សរខ្មែរបានទេ។',
+    cardSchedule: 'កាលវិភាគ',
+    emptyNote: 'សូមបញ្ចូលព័ត៌មានប្រាក់កម្ចីខាងលើ រួចបង្កើតកាលវិភាគ។',
+    errorFill: 'សូមបំពេញចំនួនប្រាក់កម្ចី រយៈពេល និងកាលបរិច្ឆេទចាប់ផ្តើម។',
+    errorGenerateFirst: 'សូមបង្កើតកាលវិភាគជាមុនសិន។',
+    thNum: '#', thDate: 'កាលបរិច្ឆេទត្រូវទូទាត់', thBegin: 'សមតុល្យដើមគ្រា', thPrincipal: 'ប្រាក់ដើម',
+    thInterest: 'ការប្រាក់', thPayment: 'ការទូទាត់', thEnd: 'សមតុល្យចុងគ្រា',
+    typeHints: {
+      normal: 'ការប្រាក់ = សមតុល្យប្រាក់ដើមនៅសល់ &times; អត្រាការប្រាក់ក្នុងមួយដំណាក់កាល។ ប្រាក់ដើមត្រូវបានចែកស្មើគ្នា ការទូទាត់ចុងក្រោយអាចខុសគ្នាបន្តិចដើម្បីឱ្យសរុបស្មើនឹងចំនួនកម្ចី។',
+      onetime: 'ចំនួនប្រាក់កម្ចីទាំងមូលបូកនឹងការប្រាក់ (ចំនួនកម្ចី &times; អត្រាការប្រាក់) ត្រូវបានសងម្តងទាំងអស់ក្នុងការទូទាត់តែមួយនៅថ្ងៃចាប់ផ្តើម មិនគិតពីរយៈពេល ឬផែនការទូទាត់ឡើយ។',
+      halfoff: 'ដូចប្រាក់កម្ចីធម្មតា ប៉ុន្តែគិតយកតែ៥០% នៃការប្រាក់ដែលបានគណនា។',
+      zero: 'គ្មានការប្រាក់ត្រូវបានគិតលើការទូទាត់ណាមួយឡើយ។'
+    },
+    planHint: {
+      monthly: 'ការទូទាត់ធ្លាក់ចូលថ្ងៃដូចគ្នារាល់ខែ (ឧទាហរណ៍ ៧/១៧/២០២៦ \u2192 ៨/១៧/២០២៦)។',
+      biweekly: 'ការទូទាត់ធ្លាក់ចូលរៀងរាល់១៤ថ្ងៃពីកាលបរិច្ឆេទចាប់ផ្តើម។ រយៈពេលគឺជាចំនួននៃការទូទាត់រៀងរាល់២សប្តាហ៍។'
+    },
+    rateHint: {
+      monthly: 'អនុវត្តម្តងក្នុងមួយការទូទាត់ជាអត្រាប្រចាំខែ ដោយសារផែនការទូទាត់ជាប្រចាំខែ។',
+      biweekly: 'អនុវត្តម្តងក្នុងមួយការទូទាត់ជាអត្រារៀងរាល់២សប្តាហ៍ ដោយសារផែនការទូទាត់ជារៀងរាល់២សប្តាហ៍។'
+    },
+    pdfTitle: 'Loan amortization schedule',
+    metaLoanAmount: 'ចំនួនប្រាក់កម្ចី', metaLoanType: 'ប្រភេទប្រាក់កម្ចី', metaDuration: 'រយៈពេល (ដំណាក់កាល)',
+    metaRate: 'អត្រាការប្រាក់ក្នុងមួយដំណាក់កាល (%)', metaPlan: 'ផែនការទូទាត់', metaStartDate: 'កាលបរិច្ឆេទចាប់ផ្តើម',
+    metaNumPayments: 'ចំនួនការទូទាត់', metaTotalInterest: 'ការប្រាក់សរុប', metaTotalPaid: 'ចំនួនទឹកប្រាក់សរុបបានសង'
   }
-});
+};
+
+function refreshDynamicHints(){
+  var t = i18n[currentLang];
+  var loanType = document.getElementById('loanType').value;
+  var plan = document.getElementById('plan').value;
+  document.getElementById('typeHint').innerHTML = t.typeHints[loanType];
+  document.getElementById('planHint').textContent = t.planHint[plan];
+  document.getElementById('rateHint').textContent = t.rateHint[plan];
+}
+
+function setLanguage(lang){
+  currentLang = lang;
+  var t = i18n[lang];
+  document.body.classList.toggle('lang-km', lang === 'km');
+  document.getElementById('langBtnEn').classList.toggle('active', lang === 'en');
+  document.getElementById('langBtnKm').classList.toggle('active', lang === 'km');
+
+  document.getElementById('txtTitle').textContent = t.title;
+  document.getElementById('txtSubtitle').textContent = t.subtitle;
+  document.getElementById('txtCardParticulars').textContent = t.cardParticulars;
+  document.getElementById('lblLoanType').textContent = t.lblLoanType;
+  document.getElementById('lblLoanAmount').textContent = t.lblLoanAmount;
+  document.getElementById('lblDuration').textContent = t.lblDuration;
+  document.getElementById('durationHint').textContent = t.durationHint;
+  document.getElementById('lblRate').textContent = t.lblRate;
+  document.getElementById('lblPlan').textContent = t.lblPlan;
+  document.getElementById('lblStartDate').textContent = t.lblStartDate;
+  document.getElementById('optNormal').textContent = t.optNormal;
+  document.getElementById('optOnetime').textContent = t.optOnetime;
+  document.getElementById('optHalfoff').textContent = t.optHalfoff;
+  document.getElementById('optZero').textContent = t.optZero;
+  document.getElementById('optMonthly').textContent = t.optMonthly;
+  document.getElementById('optBiweekly').textContent = t.optBiweekly;
+  document.getElementById('btnGenerate').textContent = t.btnGenerate;
+  document.getElementById('txtCardSummary').textContent = t.cardSummary;
+  document.getElementById('txtStampLabel').textContent = t.stampLabel;
+  document.getElementById('txtStatLoan').textContent = t.statLoan;
+  document.getElementById('txtStatCount').textContent = t.statCount;
+  document.getElementById('txtStatInterest').textContent = t.statInterest;
+  document.getElementById('txtStatTotal').textContent = t.statTotal;
+  document.getElementById('btnExportExcel').textContent = t.btnExportExcel;
+  document.getElementById('btnExportPDF').textContent = t.btnExportPDF;
+  document.getElementById('txtCardSchedule').textContent = t.cardSchedule;
+
+  var pdfNote = document.getElementById('txtPdfNote');
+  if(lang === 'km'){
+    pdfNote.textContent = t.pdfNote;
+    pdfNote.style.display = 'block';
+  } else {
+    pdfNote.style.display = 'none';
+  }
+
+  refreshDynamicHints();
+
+  if(lastResult){
+    generateSchedule();
+  } else {
+    document.getElementById('txtEmptyNote').textContent = t.emptyNote;
+  }
+}
+
+document.getElementById('loanType').addEventListener('change', refreshDynamicHints);
+document.getElementById('plan').addEventListener('change', refreshDynamicHints);
 
 function fmtMoney(n){
   return '$' + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
@@ -439,17 +628,6 @@ function fmtDate(d){
   return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
 }
 
-var typeLabels = {
-  normal: 'Normal loan',
-  onetime: 'One time interest',
-  halfoff: '50% off',
-  zero: '0 interest'
-};
-var planLabels = {
-  monthly: 'Monthly',
-  biweekly: 'Every 2 weeks'
-};
-
 var lastResult = null;
 
 function generateSchedule(){
@@ -462,7 +640,7 @@ function generateSchedule(){
   var selectedType = document.getElementById('loanType').value;
 
   if(loanAmount <= 0 || duration <= 0 || !startDateVal){
-    document.getElementById('scheduleContainer').innerHTML = '<div class="empty-note">Please fill in loan amount, duration, and start date.</div>';
+    document.getElementById('scheduleContainer').innerHTML = '<div class="empty-note">' + i18n[currentLang].errorFill + '</div>';
     document.getElementById('summaryCard').style.display = 'none';
     return;
   }
@@ -537,8 +715,9 @@ function generateSchedule(){
   document.getElementById('statTotal').textContent = fmtMoney(totalPaid);
   document.getElementById('stampAmount').textContent = fmtMoney(totalInterest);
 
+  var t = i18n[currentLang];
   var html = '<div class="table-scroll"><table class="schedule"><thead><tr>' +
-    '<th>#</th><th>Due date</th><th>Beginning balance</th><th>Principal</th><th>Interest</th><th>Payment</th><th>Ending balance</th>' +
+    '<th>' + t.thNum + '</th><th>' + t.thDate + '</th><th>' + t.thBegin + '</th><th>' + t.thPrincipal + '</th><th>' + t.thInterest + '</th><th>' + t.thPayment + '</th><th>' + t.thEnd + '</th>' +
     '</tr></thead><tbody>';
 
   rows.forEach(function(r){
@@ -560,9 +739,9 @@ function generateSchedule(){
   lastResult = {
     loanAmount: loanAmount,
     duration: duration,
-    typeLabel: typeLabels[selectedType],
+    typeKey: selectedType,
     ratePct: monthlyRatePct,
-    planLabel: planLabels[plan],
+    planKey: plan,
     startDateStr: fmtDate(startDate),
     numPayments: numPayments,
     rows: rows,
@@ -571,30 +750,35 @@ function generateSchedule(){
   };
 }
 
-function buildMetaRows(){
+var typeOptionKey = { normal:'optNormal', onetime:'optOnetime', halfoff:'optHalfoff', zero:'optZero' };
+var planOptionKey = { monthly:'optMonthly', biweekly:'optBiweekly' };
+
+function buildMetaRows(lang){
+  var t = i18n[lang];
   return [
-    ['Loan amount', lastResult.loanAmount],
-    ['Loan type', lastResult.typeLabel],
-    ['Duration (periods)', lastResult.duration],
-    ['Interest rate per period (%)', lastResult.ratePct],
-    ['Pay plan', lastResult.planLabel],
-    ['Start date', lastResult.startDateStr],
-    ['Number of payments', lastResult.numPayments],
-    ['Total interest', lastResult.totalInterest],
-    ['Total paid back', lastResult.totalPaid]
+    [t.metaLoanAmount, lastResult.loanAmount],
+    [t.metaLoanType, t[typeOptionKey[lastResult.typeKey]]],
+    [t.metaDuration, lastResult.duration],
+    [t.metaRate, lastResult.ratePct],
+    [t.metaPlan, t[planOptionKey[lastResult.planKey]]],
+    [t.metaStartDate, lastResult.startDateStr],
+    [t.metaNumPayments, lastResult.numPayments],
+    [t.metaTotalInterest, lastResult.totalInterest],
+    [t.metaTotalPaid, lastResult.totalPaid]
   ];
 }
 
 function exportExcel(){
   if(!lastResult){
-    alert('Please generate a schedule first.');
+    alert(i18n[currentLang].errorGenerateFirst);
     return;
   }
-  var meta = buildMetaRows();
-  var aoa = [['Loan amortization schedule'], []];
+  var t = i18n[currentLang];
+  var meta = buildMetaRows(currentLang);
+  var aoa = [[t.pdfTitle], []];
   meta.forEach(function(r){ aoa.push(r); });
   aoa.push([]);
-  aoa.push(['#','Due date','Beginning balance','Principal','Interest','Payment','Ending balance']);
+  aoa.push([t.thNum, t.thDate, t.thBegin, t.thPrincipal, t.thInterest, t.thPayment, t.thEnd]);
   lastResult.rows.forEach(function(r){
     aoa.push([r.num, r.date, r.begin, r.principal, r.interest, r.payment, r.end]);
   });
@@ -608,16 +792,17 @@ function exportExcel(){
 
 function exportPDF(){
   if(!lastResult){
-    alert('Please generate a schedule first.');
+    alert(i18n[currentLang].errorGenerateFirst);
     return;
   }
+  var t = i18n.en;
   var jsPDFCtor = window.jspdf.jsPDF;
   var doc = new jsPDFCtor({ orientation:'landscape', unit:'pt' });
 
   doc.setFontSize(16);
-  doc.text('Loan amortization schedule', 40, 40);
+  doc.text(t.pdfTitle, 40, 40);
 
-  var meta = buildMetaRows();
+  var meta = buildMetaRows('en');
   var metaLines = meta.map(function(r){
     var val = r[1];
     if(typeof val === 'number'){ val = fmtMoney(val); }
@@ -639,7 +824,7 @@ function exportPDF(){
 
   doc.autoTable({
     startY: tableStartY,
-    head: [['#','Due date','Beginning balance','Principal','Interest','Payment','Ending balance']],
+    head: [[t.thNum, t.thDate, t.thBegin, t.thPrincipal, t.thInterest, t.thPayment, t.thEnd]],
     body: body,
     styles: { fontSize: 8 },
     headStyles: { fillColor: [31, 61, 43] }

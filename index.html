@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loan Amortization Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --paper:#F6F1E4;
+    --paper-alt:#EFE8D6;
+    --ledger-green:#1F3D2B;
+    --ledger-green-dark:#152A1D;
+    --brass:#B08D57;
+    --ink:#2A281F;
+    --ink-soft:#5B594C;
+    --rule:#D8CFB6;
+    --alert:#A33B20;
+    --white:#FFFDF8;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    padding:32px 16px 80px;
+  }
+  .wrap{ max-width:920px; margin:0 auto; }
+
+  .masthead{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:3px solid var(--ledger-green);
+    padding-bottom:14px;
+    margin-bottom:28px;
+  }
+  .masthead h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:30px;
+    margin:0;
+    color:var(--ledger-green-dark);
+    letter-spacing:0.3px;
+  }
+  .masthead .sub{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    margin-top:4px;
+  }
+  .masthead .folio{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color:var(--brass);
+    text-align:right;
+    line-height:1.5;
+  }
+
+  .card{
+    background:var(--white);
+    border:1px solid var(--rule);
+    border-radius:6px;
+    padding:26px 28px;
+    margin-bottom:24px;
+  }
+  .card-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:17px;
+    color:var(--ledger-green-dark);
+    margin:0 0 18px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .card-title::before{
+    content:"";
+    width:8px; height:8px;
+    background:var(--brass);
+    border-radius:50%;
+    display:inline-block;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(200px,1fr));
+    gap:18px 20px;
+  }
+  .grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px 24px;
+  }
+  @media (max-width:560px){
+    .grid2{ grid-template-columns:1fr; }
+  }
+  .field label{
+    display:block;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    padding:10px 11px;
+    font-size:15px;
+    font-family:'JetBrains Mono', monospace;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .field select{ font-family:'Inter', sans-serif; }
+  .field input:focus, .field select:focus{
+    outline:none;
+    border-color:var(--ledger-green);
+    background:var(--white);
+  }
+  .field .hint{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:5px;
+    font-family:'Inter', sans-serif;
+  }
+
+  .type-options{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(190px,1fr));
+    gap:10px;
+    margin-top:4px;
+  }
+  .type-option{
+    border:1px solid var(--rule);
+    border-radius:5px;
+    padding:11px 13px;
+    cursor:pointer;
+    background:var(--paper);
+    transition:border-color .15s, background .15s;
+  }
+  .type-option.selected{
+    border-color:var(--ledger-green);
+    background:#E9F0EB;
+  }
+  .type-option .name{
+    font-weight:600;
+    font-size:13.5px;
+    color:var(--ledger-green-dark);
+  }
+  .type-option .desc{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    margin-top:3px;
+    line-height:1.4;
+  }
+
+  .btn-row{
+    display:flex;
+    justify-content:flex-end;
+    margin-top:22px;
+  }
+  button.generate{
+    background:var(--ledger-green);
+    color:var(--white);
+    border:none;
+    padding:12px 26px;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:0.5px;
+    border-radius:5px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  button.generate:hover{ background:var(--ledger-green-dark); }
+
+  .summary-wrap{ position:relative; }
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(170px,1fr));
+    gap:14px;
+  }
+  .stat{
+    background:var(--paper);
+    border-radius:5px;
+    padding:14px 16px;
+  }
+  .stat .label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .stat .value{
+    font-family:'JetBrains Mono', monospace;
+    font-size:20px;
+    font-weight:500;
+    color:var(--ledger-green-dark);
+  }
+
+  .stamp{
+    position:absolute;
+    top:-6px; right:14px;
+    width:112px; height:112px;
+    border:3px solid var(--alert);
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transform:rotate(-11deg);
+    color:var(--alert);
+    text-align:center;
+    font-family:'Fraunces', serif;
+    opacity:0.88;
+    pointer-events:none;
+  }
+  .stamp .stamp-inner{ line-height:1.25; }
+  .stamp .stamp-top{
+    font-size:9px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+  }
+  .stamp .stamp-num{
+    font-size:15px;
+    font-weight:600;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  table.schedule{
+    width:100%;
+    border-collapse:collapse;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+  }
+  table.schedule thead th{
+    background:var(--ledger-green);
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    padding:10px 10px;
+    text-align:right;
+    position:sticky;
+    top:0;
+  }
+  table.schedule thead th:first-child, table.schedule thead th:nth-child(2){ text-align:left; }
+  table.schedule tbody td{
+    padding:9px 10px;
+    text-align:right;
+    border-bottom:1px solid var(--rule);
+  }
+  table.schedule tbody td:first-child, table.schedule tbody td:nth-child(2){ text-align:left; }
+  table.schedule tbody tr:nth-child(even){ background:var(--paper-alt); }
+  table.schedule tbody tr.last-row td{
+    font-weight:600;
+    border-top:2px solid var(--brass);
+    color:var(--ledger-green-dark);
+  }
+  .table-scroll{
+    max-height:520px;
+    overflow-y:auto;
+    border:1px solid var(--rule);
+    border-radius:6px;
+  }
+
+  .empty-note{
+    color:var(--ink-soft);
+    font-size:13.5px;
+    text-align:center;
+    padding:30px 10px;
+  }
+
+  @media (max-width:600px){
+    .masthead{ flex-direction:column; align-items:flex-start; gap:8px; }
+    .masthead .folio{ text-align:left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <h1>Amortization Ledger</h1>
+      <div class="sub">Loan repayment schedule</div>
+    </div>
+    <div class="folio">
+      FOLIO NO. 001<br>
+      <span id="today-stamp"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Loan particulars</div>
+    <div class="grid2">
+      <div class="field">
+        <label for="loanType">Loan type</label>
+        <select id="loanType">
+          <option value="normal" selected>Normal loan</option>
+          <option value="onetime">One time interest</option>
+          <option value="halfoff">50% off</option>
+          <option value="zero">0 interest</option>
+        </select>
+        <div class="hint" id="typeHint">Interest = remaining principal &times; rate each period. Principal is split evenly; the last payment absorbs any rounding.</div>
+      </div>
+      <div class="field">
+        <label for="loanAmount">Loan amount</label>
+        <input type="number" id="loanAmount" value="10000" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label for="duration">Duration (number of periods)</label>
+        <input type="number" id="duration" value="12" min="1" step="1">
+        <div class="hint">Total number of scheduled payments over the loan's life.</div>
+      </div>
+      <div class="field">
+        <label for="rate">Interest rate per period (%)</label>
+        <input type="number" id="rate" value="2" min="0" step="0.01">
+        <div class="hint" id="rateHint">Applied once per payment: as the monthly rate if Pay plan is Monthly, or as the 2-week rate if Pay plan is Every 2 weeks.</div>
+      </div>
+      <div class="field">
+        <label for="plan">Pay plan</label>
+        <select id="plan">
+          <option value="monthly">Monthly (same date each month)</option>
+          <option value="biweekly">Every 2 weeks</option>
+        </select>
+        <div class="hint" id="planHint">Payments fall on the same day each month (e.g. 7/17/2026 &rarr; 8/17/2026).</div>
+      </div>
+      <div class="field">
+        <label for="startDate">Start date (first payment)</label>
+        <input type="date" id="startDate">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="generate" onclick="generateSchedule()">Generate schedule</button>
+    </div>
+  </div>
+
+  <div class="card summary-wrap" id="summaryCard" style="display:none;">
+    <div class="card-title">Summary</div>
+    <div class="stamp" id="interestStamp">
+      <div class="stamp-inner">
+        <div class="stamp-top">Total interest</div>
+        <div class="stamp-num" id="stampAmount">$0</div>
+      </div>
+    </div>
+    <div class="summary-grid">
+      <div class="stat">
+        <div class="label">Loan amount</div>
+        <div class="value" id="statLoan">$0.00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Number of payments</div>
+        <div class="value" id="statCount">0</div>
+      </div>
+      <div class="stat">
+        <div class="label">Total interest</div>
+        <div class="value" id="statInterest">$0.00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Total paid back</div>
+        <div class="value" id="statTotal">$0.00</div>
+      </div>
+    </div>
+    <div class="btn-row" style="justify-content:flex-start; gap:10px; margin-top:20px;">
+      <button class="generate" style="background:var(--brass);" onclick="exportExcel()">Export to Excel</button>
+      <button class="generate" onclick="exportPDF()">Export to PDF</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Schedule</div>
+    <div id="scheduleContainer">
+      <div class="empty-note">Enter loan details above and generate the schedule.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.getElementById('startDate').valueAsDate = new Date();
+document.getElementById('today-stamp').textContent = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+
+var typeHints = {
+  normal: 'Interest = remaining principal &times; rate each period. Principal is split evenly; the last payment absorbs any rounding.',
+  onetime: 'The full loan amount plus interest (loan amount &times; rate) is repaid in a single payment on the start date, regardless of duration or payback plan.',
+  halfoff: 'Same as normal loan, but only 50% of the computed interest is charged.',
+  zero: 'No interest is charged on any payment.'
+};
+document.getElementById('loanType').addEventListener('change', function(){
+  document.getElementById('typeHint').innerHTML = typeHints[this.value];
+});
+
+document.getElementById('plan').addEventListener('change', function(){
+  var hint = document.getElementById('planHint');
+  var rateHint = document.getElementById('rateHint');
+  if(this.value === 'biweekly'){
+    hint.textContent = 'Payments fall every 14 days from the start date. Duration is the number of biweekly payments.';
+    rateHint.textContent = 'Applied once per payment as the 2-week rate, since Pay plan is Every 2 weeks.';
+  } else {
+    hint.textContent = 'Payments fall on the same day each month (e.g. 7/17/2026 \u2192 8/17/2026).';
+    rateHint.textContent = 'Applied once per payment as the monthly rate, since Pay plan is Monthly.';
+  }
+});
+
+function fmtMoney(n){
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+function addMonths(date, months){
+  var d = new Date(date.getTime());
+  var day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + months);
+  var lastDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return d;
+}
+
+function addDays(date, days){
+  var d = new Date(date.getTime());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function fmtDate(d){
+  return (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+}
+
+var typeLabels = {
+  normal: 'Normal loan',
+  onetime: 'One time interest',
+  halfoff: '50% off',
+  zero: '0 interest'
+};
+var planLabels = {
+  monthly: 'Monthly',
+  biweekly: 'Every 2 weeks'
+};
+
+var lastResult = null;
+
+function generateSchedule(){
+  var loanAmount = parseFloat(document.getElementById('loanAmount').value) || 0;
+  var duration = parseInt(document.getElementById('duration').value) || 0;
+  var monthlyRatePct = parseFloat(document.getElementById('rate').value) || 0;
+  var monthlyRate = monthlyRatePct / 100;
+  var plan = document.getElementById('plan').value;
+  var startDateVal = document.getElementById('startDate').value;
+  var selectedType = document.getElementById('loanType').value;
+
+  if(loanAmount <= 0 || duration <= 0 || !startDateVal){
+    document.getElementById('scheduleContainer').innerHTML = '<div class="empty-note">Please fill in loan amount, duration, and start date.</div>';
+    document.getElementById('summaryCard').style.display = 'none';
+    return;
+  }
+
+  var startDate = new Date(startDateVal + 'T00:00:00');
+
+  var numPayments, periodicRate;
+  if(selectedType === 'onetime'){
+    numPayments = 1;
+  } else {
+    numPayments = duration;
+  }
+  periodicRate = monthlyRate;
+
+  var basePrincipal = Math.round((loanAmount / numPayments) * 100) / 100;
+  var oneTimeInterestTotal = Math.round(loanAmount * monthlyRate * 100) / 100;
+
+  var rows = [];
+  var remaining = loanAmount;
+  var principalSoFar = 0;
+  var currentDate = new Date(startDate.getTime());
+
+  for(var i=1; i<=numPayments; i++){
+    var beginBalance = remaining;
+    var principal;
+    if(i === numPayments){
+      principal = Math.round((loanAmount - principalSoFar) * 100) / 100;
+    } else {
+      principal = basePrincipal;
+    }
+    principalSoFar += principal;
+
+    var interest = 0;
+    if(selectedType === 'normal'){
+      interest = beginBalance * periodicRate;
+    } else if(selectedType === 'halfoff'){
+      interest = beginBalance * periodicRate * 0.5;
+    } else if(selectedType === 'onetime'){
+      interest = (i === 1) ? oneTimeInterestTotal : 0;
+    } else if(selectedType === 'zero'){
+      interest = 0;
+    }
+    interest = Math.round(interest * 100) / 100;
+
+    var payment = Math.round((principal + interest) * 100) / 100;
+    remaining = Math.round((remaining - principal) * 100) / 100;
+
+    rows.push({
+      num: i,
+      date: fmtDate(currentDate),
+      begin: beginBalance,
+      principal: principal,
+      interest: interest,
+      payment: payment,
+      end: remaining
+    });
+
+    if(plan === 'monthly'){
+      currentDate = addMonths(startDate, i);
+    } else {
+      currentDate = addDays(startDate, i*14);
+    }
+  }
+
+  var totalInterest = rows.reduce(function(sum, r){ return sum + r.interest; }, 0);
+  var totalPaid = rows.reduce(function(sum, r){ return sum + r.payment; }, 0);
+
+  document.getElementById('summaryCard').style.display = 'block';
+  document.getElementById('statLoan').textContent = fmtMoney(loanAmount);
+  document.getElementById('statCount').textContent = numPayments;
+  document.getElementById('statInterest').textContent = fmtMoney(totalInterest);
+  document.getElementById('statTotal').textContent = fmtMoney(totalPaid);
+  document.getElementById('stampAmount').textContent = fmtMoney(totalInterest);
+
+  var html = '<div class="table-scroll"><table class="schedule"><thead><tr>' +
+    '<th>#</th><th>Due date</th><th>Beginning balance</th><th>Principal</th><th>Interest</th><th>Payment</th><th>Ending balance</th>' +
+    '</tr></thead><tbody>';
+
+  rows.forEach(function(r){
+    var rowClass = (r.num === numPayments) ? ' class="last-row"' : '';
+    html += '<tr' + rowClass + '>' +
+      '<td>' + r.num + '</td>' +
+      '<td>' + r.date + '</td>' +
+      '<td>' + fmtMoney(r.begin) + '</td>' +
+      '<td>' + fmtMoney(r.principal) + '</td>' +
+      '<td>' + fmtMoney(r.interest) + '</td>' +
+      '<td>' + fmtMoney(r.payment) + '</td>' +
+      '<td>' + fmtMoney(r.end) + '</td>' +
+      '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  document.getElementById('scheduleContainer').innerHTML = html;
+
+  lastResult = {
+    loanAmount: loanAmount,
+    duration: duration,
+    typeLabel: typeLabels[selectedType],
+    ratePct: monthlyRatePct,
+    planLabel: planLabels[plan],
+    startDateStr: fmtDate(startDate),
+    numPayments: numPayments,
+    rows: rows,
+    totalInterest: totalInterest,
+    totalPaid: totalPaid
+  };
+}
+
+function buildMetaRows(){
+  return [
+    ['Loan amount', lastResult.loanAmount],
+    ['Loan type', lastResult.typeLabel],
+    ['Duration (periods)', lastResult.duration],
+    ['Interest rate per period (%)', lastResult.ratePct],
+    ['Pay plan', lastResult.planLabel],
+    ['Start date', lastResult.startDateStr],
+    ['Number of payments', lastResult.numPayments],
+    ['Total interest', lastResult.totalInterest],
+    ['Total paid back', lastResult.totalPaid]
+  ];
+}
+
+function exportExcel(){
+  if(!lastResult){
+    alert('Please generate a schedule first.');
+    return;
+  }
+  var meta = buildMetaRows();
+  var aoa = [['Loan amortization schedule'], []];
+  meta.forEach(function(r){ aoa.push(r); });
+  aoa.push([]);
+  aoa.push(['#','Due date','Beginning balance','Principal','Interest','Payment','Ending balance']);
+  lastResult.rows.forEach(function(r){
+    aoa.push([r.num, r.date, r.begin, r.principal, r.interest, r.payment, r.end]);
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:8},{wch:14},{wch:18},{wch:14},{wch:12},{wch:14},{wch:18}];
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
+  XLSX.writeFile(wb, 'loan_amortization_schedule.xlsx');
+}
+
+function exportPDF(){
+  if(!lastResult){
+    alert('Please generate a schedule first.');
+    return;
+  }
+  var jsPDFCtor = window.jspdf.jsPDF;
+  var doc = new jsPDFCtor({ orientation:'landscape', unit:'pt' });
+
+  doc.setFontSize(16);
+  doc.text('Loan amortization schedule', 40, 40);
+
+  var meta = buildMetaRows();
+  var metaLines = meta.map(function(r){
+    var val = r[1];
+    if(typeof val === 'number'){ val = fmtMoney(val); }
+    return r[0] + ':  ' + val;
+  });
+
+  doc.setFontSize(10);
+  var col1 = metaLines.slice(0, 5);
+  var col2 = metaLines.slice(5);
+  var y = 62;
+  col1.forEach(function(line, i){ doc.text(line, 40, y + i*14); });
+  col2.forEach(function(line, i){ doc.text(line, 320, y + i*14); });
+
+  var tableStartY = y + Math.max(col1.length, col2.length) * 14 + 16;
+
+  var body = lastResult.rows.map(function(r){
+    return [r.num, r.date, fmtMoney(r.begin), fmtMoney(r.principal), fmtMoney(r.interest), fmtMoney(r.payment), fmtMoney(r.end)];
+  });
+
+  doc.autoTable({
+    startY: tableStartY,
+    head: [['#','Due date','Beginning balance','Principal','Interest','Payment','Ending balance']],
+    body: body,
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [31, 61, 43] }
+  });
+
+  doc.save('loan_amortization_schedule.pdf');
+}
+</script>
+</body>
+</html>

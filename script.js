@@ -51,6 +51,7 @@ var i18n = {
       monthly: 'Applied once per payment as the monthly rate, since Pay plan is Monthly.',
       biweekly: 'Applied once per payment as the 2-week rate, since Pay plan is Every 2 weeks.'
     },
+    rateHintOnetime: 'Interest is charged only one time, since "One Time Interest" is selected.',
     pdfTitle: 'Loan amortization schedule',
     metaLoanAmount: 'Loan amount', metaLoanType: 'Loan type', metaDuration: 'Duration (periods)',
     metaRate: 'Interest rate per period (%)', metaPlan: 'Pay plan', metaStartDate: 'Start date',
@@ -103,6 +104,7 @@ var i18n = {
       monthly: 'អនុវត្តម្តងក្នុងមួយការទូទាត់ជាអត្រាប្រចាំខែ ដោយសារផែនការទូទាត់ជាប្រចាំខែ។',
       biweekly: 'អនុវត្តម្តងក្នុងមួយការទូទាត់ជាអត្រារៀងរាល់២សប្តាហ៍ ដោយសារផែនការទូទាត់ជារៀងរាល់២សប្តាហ៍។'
     },
+    rateHintOnetime: 'ការប្រាក់ត្រូវបានគិតតែម្តងប៉ុណ្ណោះ ដោយសារ "ការប្រាក់ម្តងតែម្តង" ត្រូវបានជ្រើសរើស។',
     pdfTitle: 'Loan amortization schedule',
     metaLoanAmount: 'ចំនួនប្រាក់កម្ចី', metaLoanType: 'ប្រភេទប្រាក់កម្ចី', metaDuration: 'រយៈពេល (ដំណាក់កាល)',
     metaRate: 'អត្រាការប្រាក់ក្នុងមួយដំណាក់កាល (%)', metaPlan: 'ផែនការទូទាត់', metaStartDate: 'កាលបរិច្ឆេទចាប់ផ្តើម',
@@ -116,7 +118,7 @@ function refreshDynamicHints(){
   var plan = document.getElementById('plan').value;
   document.getElementById('typeHint').innerHTML = t.typeHints[loanType];
   document.getElementById('planHint').textContent = t.planHint[plan];
-  document.getElementById('rateHint').textContent = t.rateHint[plan];
+  document.getElementById('rateHint').textContent = (loanType === 'onetime') ? t.rateHintOnetime : t.rateHint[plan];
 }
 
 function setLanguage(lang){

@@ -52,6 +52,11 @@ var i18n = {
       biweekly: 'Applied once per payment as the 2-week rate, since Pay plan is Every 2 weeks.'
     },
     rateHintOnetime: 'Interest is charged only one time, since "One Time Interest" is selected.',
+    rateHintZero: '0 interest will be applied, since 0 Interest is selected.',
+    rateHintHalfoff: {
+      monthly: 'Only 50% of the above interest will be charged per month, since Pay plan is Monthly.',
+      biweekly: 'Only 50% of the above interest will be charged every 2 weeks, since Pay plan is Every 2 weeks.'
+    },
     pdfTitle: 'Loan amortization schedule',
     metaLoanAmount: 'Loan amount', metaLoanType: 'Loan type', metaDuration: 'Duration (periods)',
     metaRate: 'Interest rate per period (%)', metaPlan: 'Pay plan', metaStartDate: 'Start date',
@@ -105,6 +110,11 @@ var i18n = {
       biweekly: 'អនុវត្តម្តងក្នុងមួយការទូទាត់ជាអត្រារៀងរាល់២សប្តាហ៍ ដោយសារផែនការទូទាត់ជារៀងរាល់២សប្តាហ៍។'
     },
     rateHintOnetime: 'ការប្រាក់ត្រូវបានគិតតែម្តងប៉ុណ្ណោះ ដោយសារ "ការប្រាក់ម្តងតែម្តង" ត្រូវបានជ្រើសរើស។',
+    rateHintZero: 'គ្មានការប្រាក់ត្រូវបានអនុវត្ត ដោយសារ "គ្មានការប្រាក់" ត្រូវបានជ្រើសរើស។',
+    rateHintHalfoff: {
+      monthly: 'គិតយកតែ៥០% នៃការប្រាក់ខាងលើប្រចាំខែ ដោយសារផែនការទូទាត់ជាប្រចាំខែ។',
+      biweekly: 'គិតយកតែ៥០% នៃការប្រាក់ខាងលើរៀងរាល់២សប្តាហ៍ ដោយសារផែនការទូទាត់ជារៀងរាល់២សប្តាហ៍។'
+    },
     pdfTitle: 'Loan amortization schedule',
     metaLoanAmount: 'ចំនួនប្រាក់កម្ចី', metaLoanType: 'ប្រភេទប្រាក់កម្ចី', metaDuration: 'រយៈពេល (ដំណាក់កាល)',
     metaRate: 'អត្រាការប្រាក់ក្នុងមួយដំណាក់កាល (%)', metaPlan: 'ផែនការទូទាត់', metaStartDate: 'កាលបរិច្ឆេទចាប់ផ្តើម',
@@ -118,7 +128,17 @@ function refreshDynamicHints(){
   var plan = document.getElementById('plan').value;
   document.getElementById('typeHint').innerHTML = t.typeHints[loanType];
   document.getElementById('planHint').textContent = t.planHint[plan];
-  document.getElementById('rateHint').textContent = (loanType === 'onetime') ? t.rateHintOnetime : t.rateHint[plan];
+  var rateHintText;
+  if(loanType === 'onetime'){
+    rateHintText = t.rateHintOnetime;
+  } else if(loanType === 'zero'){
+    rateHintText = t.rateHintZero;
+  } else if(loanType === 'halfoff'){
+    rateHintText = t.rateHintHalfoff[plan];
+  } else {
+    rateHintText = t.rateHint[plan];
+  }
+  document.getElementById('rateHint').textContent = rateHintText;
 }
 
 function setLanguage(lang){

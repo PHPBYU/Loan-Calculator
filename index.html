@@ -336,7 +336,7 @@
       <div class="sub" id="txtSubtitle">Loan repayment schedule</div>
     </div>
     <div class="folio">
-      Version 2.0<br>
+      Version 2.5<br>
       <span id="today-stamp"></span>
     </div>
   </div>
@@ -756,16 +756,22 @@ var planOptionKey = { monthly:'optMonthly', biweekly:'optBiweekly' };
 function buildMetaRows(lang){
   var t = i18n[lang];
   return [
-    [t.metaLoanAmount, lastResult.loanAmount],
-    [t.metaLoanType, t[typeOptionKey[lastResult.typeKey]]],
-    [t.metaDuration, lastResult.duration],
-    [t.metaRate, lastResult.ratePct],
-    [t.metaPlan, t[planOptionKey[lastResult.planKey]]],
-    [t.metaStartDate, lastResult.startDateStr],
-    [t.metaNumPayments, lastResult.numPayments],
-    [t.metaTotalInterest, lastResult.totalInterest],
-    [t.metaTotalPaid, lastResult.totalPaid]
+    { label: t.metaLoanAmount, value: lastResult.loanAmount, type: 'currency' },
+    { label: t.metaLoanType, value: t[typeOptionKey[lastResult.typeKey]], type: 'text' },
+    { label: t.metaDuration, value: lastResult.duration, type: 'count' },
+    { label: t.metaRate, value: lastResult.ratePct, type: 'percent' },
+    { label: t.metaPlan, value: t[planOptionKey[lastResult.planKey]], type: 'text' },
+    { label: t.metaStartDate, value: lastResult.startDateStr, type: 'text' },
+    { label: t.metaNumPayments, value: lastResult.numPayments, type: 'count' },
+    { label: t.metaTotalInterest, value: lastResult.totalInterest, type: 'currency' },
+    { label: t.metaTotalPaid, value: lastResult.totalPaid, type: 'currency' }
   ];
+}
+
+function formatMetaValue(item){
+  if(item.type === 'currency'){ return fmtMoney(item.value); }
+  if(item.type === 'percent'){ return item.value + '%'; }
+  return item.value;
 }
 
 function exportExcel(){
@@ -776,7 +782,9 @@ function exportExcel(){
   var t = i18n[currentLang];
   var meta = buildMetaRows(currentLang);
   var aoa = [[t.pdfTitle], []];
-  meta.forEach(function(r){ aoa.push(r); });
+  meta.forEach(function(item){
+    aoa.push([item.label, formatMetaValue(item)]);
+  });
   aoa.push([]);
   aoa.push([t.thNum, t.thDate, t.thBegin, t.thPrincipal, t.thInterest, t.thPayment, t.thEnd]);
   lastResult.rows.forEach(function(r){
@@ -803,10 +811,8 @@ function exportPDF(){
   doc.text(t.pdfTitle, 40, 40);
 
   var meta = buildMetaRows('en');
-  var metaLines = meta.map(function(r){
-    var val = r[1];
-    if(typeof val === 'number'){ val = fmtMoney(val); }
-    return r[0] + ':  ' + val;
+  var metaLines = meta.map(function(item){
+    return item.label + ':  ' + formatMetaValue(item);
   });
 
   doc.setFontSize(10);
